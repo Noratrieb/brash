@@ -10,6 +10,96 @@ pub fn parse(filename: Arc<str>, src: &str) -> Result<()> {
     Ok(())
 }
 
+/*
+Simplified conceptually:
+COMMAND = PIPELINE
+PIPELINE = LIST { "|" LIST }
+LIST = COMPOUND { "&&" COMPOUND }
+COMPOUND = ???
+SIMPLECOMMAND = word { word }
+*/
+
+pub struct SimpleCommand<'a> {
+    pub tokens: Vec<Token<'a>>,
+}
+
+pub enum CompoundCommand<'a> {
+    Simple(SimpleCommand<'a>),
+    Until {
+        test: Command<'a>,
+        do_: Vec<Command<'a>>,
+    },
+    While {
+        test: Command<'a>,
+        do_: Vec<Command<'a>>,
+    },
+    For {
+        name: Token<'a>,
+        words: Vec<Token<'a>>,
+        do_: Vec<Command<'a>>,
+    },
+    ForArith,
+    If {
+        test: Command<'a>,
+        then: Vec<Command<'a>>,
+        elif: Vec<(Command<'a>, Vec<Command<'a>>)>,
+        else_: Vec<Command<'a>>,
+    },
+    Case,
+    Select,
+    /// `(( ))`
+    Arith,
+    /// `[[ ]]`
+    CondExpr,
+}
+
+pub struct CommandList<'a> {
+    pub initial: SimpleCommand<'a>,
+    pub rest: Vec<(ListKind, SimpleCommand<'a>)>,
+}
+
+pub struct Pipeline<'a> {
+    pub time: bool,
+    /// !!!!
+    pub exclamation: bool,
+    pub initial: CommandList<'a>,
+    pub rest: Vec<(PipelineKind, CommandList<'a>)>,
+    pub terminator: Option<ListTerminator>,
+}
+
+pub enum Command<'a> {
+    Single(Pipeline<'a>),
+    /// `()`
+    Subshell(Vec<Command<'a>>),
+    /// `{}`
+    Block(Vec<Command<'a>>),
+}
+
+pub enum ListKind {
+    /// `;`
+    Chain,
+    /// `&``
+    Async,
+    /// `&&`
+    And,
+    /// `||`
+    Or,
+    Newline,
+}
+
+pub enum ListTerminator {
+    Chain,
+    Async,
+    Newline,
+}
+
+pub enum PipelineKind {
+    /// `|`
+    Simple,
+    /// `|&`
+    All,
+}
+
 #[derive(Debug)]
 pub struct Span {
     pub filename: Arc<str>,
