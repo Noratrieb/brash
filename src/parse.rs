@@ -4,10 +4,27 @@ use std::{borrow::Cow, iter, sync::Arc};
 
 use anyhow::{bail, Result};
 
-pub fn parse(filename: Arc<str>, src: &str) -> Result<()> {
-    let tokens = lex(filename, src)?;
-    dbg!(tokens);
-    Ok(())
+pub fn parse(filename: Arc<str>, src: &str) -> Result<Vec<Command>> {
+    let mut tokens = lex(filename, src)?;
+    dbg!(&tokens);
+
+    if tokens.get(0).map_or(false, |t| t.value.is_empty()) {
+        // bad hack or whatever, everything in here is a bad hack
+        tokens.remove(0);
+    }
+
+    let command = SimpleCommand { tokens };
+
+    Ok(vec![Command::Single(Pipeline {
+        time: false,
+        exclamation: false,
+        initial: CommandList {
+            initial: command,
+            rest: vec![],
+        },
+        rest: vec![],
+        terminator: None,
+    })])
 }
 
 /*

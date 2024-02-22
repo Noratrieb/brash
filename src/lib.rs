@@ -1,13 +1,17 @@
 pub mod parse;
+pub mod execute;
 
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context, Result};
+use execute::execute;
 
 pub fn bash_it(args: impl Iterator<Item = String>) -> Result<()> {
     let (filename, src) = parse_args_into_src(args)?;
 
-    parse::parse(filename, &src)?;
+    let command = parse::parse(filename, &src)?;
+
+    execute(&command);
 
     Ok(())
 }
